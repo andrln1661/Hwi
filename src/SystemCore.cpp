@@ -1,3 +1,4 @@
+#include "Globals.h"
 #include "SystemCore.h"
 #include "Config.h"
 #include "PWMController.h"   // Add this line
@@ -47,6 +48,9 @@ SystemCore::SystemCore()
           Motor(14, PWM_PINS[14], CURRENT_PINS[14], &motorSensors[14])
       },
       prev_prescaler(0) {
+        ::modbusHandler = &modbus;
+        ::deviceManager = &deviceManager;
+        ::motors = this -> motors;
     
     // Initialize motor sensors
     for (uint8_t i = 0; i < NUM_MOTORS; i++) {

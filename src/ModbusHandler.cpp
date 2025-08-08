@@ -2,13 +2,14 @@
 #include "Motor.h"
 #include "DeviceManager.h"
 #include "Config.h"
+#include "Globals.h"
 
 // Static pointer to allow static callback access to Modbus instance
 ModbusRTU* ModbusHandler::mbInstance = nullptr;
 
 // Externally defined motor and device objects (e.g., in SystemCore.cpp)
-extern Motor motors[NUM_MOTORS];
-extern DeviceManager deviceManager;
+// extern Motor motors[NUM_MOTORS];
+// extern DeviceManager deviceManager;
 
 ModbusHandler::ModbusHandler(HardwareSerial& port, uint8_t slaveID)
     : mb() {
@@ -109,22 +110,22 @@ uint16_t ModbusHandler::handleDeviceWrite(TRegister* reg, uint16_t val) {
 
     // Fan control
     if (addr == ModbusReg::FAN_REG) {
-        deviceManager.controlFan(val > 0);
+        deviceManager->controlFan(val > 0);
         return val;
     }
     // Mixer control
     else if (addr == ModbusReg::MIXER_REG) {
-        deviceManager.controlMixer(val > 0);
+        deviceManager->controlMixer(val > 0);
         return val;
     }
     // Dispenser control
     else if (addr == ModbusReg::DISPENSER_REG) {
-        deviceManager.controlDispenser(val > 0);
+        deviceManager->controlDispenser(val > 0);
         return val;
     }
     // Pump control
     else if (addr == ModbusReg::PUMP_REG) {
-        deviceManager.controlPump(val > 0);
+        deviceManager->controlPump(val > 0);
         return val;
     }
 
@@ -141,10 +142,10 @@ uint16_t ModbusHandler::handleSystemWrite(TRegister* reg, uint16_t val) {
         }
 
         // Turn off all system actuators
-        deviceManager.controlFan(false);
-        deviceManager.controlMixer(false);
-        deviceManager.controlDispenser(false);
-        deviceManager.controlPump(false);
+        deviceManager->controlFan(false);
+        deviceManager->controlMixer(false);
+        deviceManager->controlDispenser(false);
+        deviceManager->controlPump(false);
     }
 
     return 1;  // Acknowledge successful write

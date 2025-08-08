@@ -7,6 +7,7 @@
 
 // Motor control PWM output pins (software/hardware PWM)
 constexpr uint8_t PWM_PINS[15] = {2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 44, 45, 46};
+constexpr uint8_t SLAVE_ID = 1;
 
 // Motor current sensor analog input pins (ACS712 or similar)
 constexpr uint8_t CURRENT_PINS[15] = {A0, A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14};

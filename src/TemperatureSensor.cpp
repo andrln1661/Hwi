@@ -1,9 +1,8 @@
 #include "TemperatureSensor.h"
 #include "ModbusHandler.h"
 #include "Config.h"
+#include "Globals.h"
 
-// Provide access to the global ModbusHandler instance
-extern ModbusHandler modbusHandler;
 
 // Constructor: initializes sensor objects and register mappings
 TemperatureSensor::TemperatureSensor(uint8_t pin, uint16_t tempReg, 
@@ -36,8 +35,8 @@ void TemperatureSensor::update() {
         temperature = static_cast<int16_t>(tempC * 100); 
         
         // Read threshold values from holding registers
-        uint16_t lowThreshold = modbusHandler.getHreg(regLowThreshold);
-        uint16_t highThreshold = modbusHandler.getHreg(regHighThreshold);
+        uint16_t lowThreshold = modbusHandler->getHreg(regLowThreshold);
+        uint16_t highThreshold = modbusHandler->getHreg(regHighThreshold);
 
         // Compare and classify temperature status
         if (temperature >= static_cast<int16_t>(highThreshold))
@@ -49,7 +48,7 @@ void TemperatureSensor::update() {
     }
 
     // Write temperature to input register (read-only from master perspective)
-    modbusHandler.setIreg(regTemp, static_cast<uint16_t>(temperature));
+    modbusHandler->setIreg(regTemp, static_cast<uint16_t>(temperature));
     // Note: If temperature is negative, casting to uint16_t will wrap around,
     // which may need special handling on Modbus master side.
 }
