@@ -14,7 +14,7 @@ ModbusRTU* ModbusHandler::mbInstance = nullptr;
 ModbusHandler::ModbusHandler(HardwareSerial& port, uint8_t slaveID)
     : mb() {
     mbInstance = &mb;             // Link static instance pointer (for callbacks if needed)
-    mb.begin(&port, -1);          // -1 means no DE/RE pin used (e.g. for RS-485)
+    mb.begin(&port);          // -1 means no DE/RE pin used (e.g. for RS-485)
     mb.slave(slaveID);            // Set this device’s Modbus slave ID
 }
 

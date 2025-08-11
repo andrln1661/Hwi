@@ -33,4 +33,7 @@ public:
 
     // Returns current status code
     uint8_t getStatus() const;
+
+    // Read data from sensors (Take's a bit time so we need it to call before reading temps)
+    void requestTemperatures(uint64_t now);
 };

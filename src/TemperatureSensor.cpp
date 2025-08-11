@@ -18,14 +18,21 @@ TemperatureSensor::TemperatureSensor(uint8_t pin, uint16_t tempReg,
 // Initializes the temperature sensor hardware
 void TemperatureSensor::begin() {
     sensor.begin();               // Initialize DallasTemperature library
-    sensor.setResolution(11);     // Set sensor resolution (11 bits = 0.125°C precision)
+    sensor.setResolution(9);     // Set sensor resolution (11 bits = 0.125°C precision)
+    sensor.setWaitForConversion(false);
+}
+
+void TemperatureSensor::requestTemperatures(uint64_t now) {
+    static uint64_t lastTemperatureRequest = 0;
+    if (now - lastTemperatureRequest > 1000) {
+        sensor.requestTemperatures(); // Trigger temperature reading from DS18B20
+    }
 }
 
 // Reads temperature, checks thresholds, and updates Modbus registers
 void TemperatureSensor::update() {
-    sensor.requestTemperatures(); // Trigger temperature reading from DS18B20
     float tempC = sensor.getTempCByIndex(0); // Read the first sensor on the bus
-    
+ 
     if (tempC == DEVICE_DISCONNECTED_C) {
         // Handle sensor disconnect case
         temperature = -32768;     // INT16_MIN sentinel value to indicate error

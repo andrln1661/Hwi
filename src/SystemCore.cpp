@@ -74,6 +74,7 @@ SystemCore::SystemCore()
 }
 
 void SystemCore::setup() {
+    Serial.begin(250000, SERIAL_8N1);
     PWMController::initialize();
     modbus.begin();
     
@@ -95,6 +96,7 @@ void SystemCore::setup() {
 
 void SystemCore::loop() {
     modbus.task();
+    Serial.println("loop");
     
     static uint64_t lastMotorUpdate = 0;
     static uint64_t lastTempUpdate = 0;
@@ -107,15 +109,20 @@ void SystemCore::loop() {
             motor.update();
         }
     }
-    
+
     // Update temperature and devices every 1000ms
     if (now - lastTempUpdate >= 1000) {
         lastTempUpdate = now;
-        
+
+        for (auto& sensor : motorSensors) {
+            sensor.requestTemperatures(now);
+        }
+
         // Update all temperature sensors
         for (auto& sensor : motorSensors) {
             sensor.update();
         }
+
         airSensor.update();
         waterSensor.update();
         
