@@ -1,5 +1,8 @@
 #pragma once
 #include <Arduino.h>  // Needed for pin constants
+    
+// Serial port configuration
+constexpr uint32_t BAUDRATE = 9600;
 
 // -------------------------
 // Pin Configuration

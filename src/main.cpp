@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <SystemCore.h>
+#include "Config.h"
 
 SystemCore systemCore;
 

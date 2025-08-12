@@ -5,7 +5,7 @@
 class ModbusHandler {
 public:
     // Constructor: takes a HardwareSerial port and slave address
-    ModbusHandler(HardwareSerial& port, uint8_t slaveID);
+    ModbusHandler(HardwareSerial& portRef, uint8_t slaveRef);
 
     // Initializes all registers and sets up ModbusRTU
     void begin();
@@ -29,6 +29,8 @@ public:
     void registerSystemCallbacks();  // Bind system-level actions (E-STOP)
 
 private:
+    HardwareSerial& port;
+    uint8_t slaveID;
     ModbusRTU mb;                   // Internal RTU instance
     static ModbusRTU* mbInstance;  // For use in static callbacks
 

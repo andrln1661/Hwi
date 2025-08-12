@@ -74,7 +74,6 @@ SystemCore::SystemCore()
 }
 
 void SystemCore::setup() {
-    Serial.begin(250000, SERIAL_8N1);
     PWMController::initialize();
     modbus.begin();
     
@@ -84,7 +83,6 @@ void SystemCore::setup() {
     for (auto& sensor : motorSensors) {
         sensor.begin();
     }
-    
     // Initialize motors
     for (auto& motor : motors) {
         motor.begin();
@@ -96,7 +94,6 @@ void SystemCore::setup() {
 
 void SystemCore::loop() {
     modbus.task();
-    Serial.println("loop");
     
     static uint64_t lastMotorUpdate = 0;
     static uint64_t lastTempUpdate = 0;

@@ -11,15 +11,17 @@ ModbusRTU* ModbusHandler::mbInstance = nullptr;
 // extern Motor motors[NUM_MOTORS];
 // extern DeviceManager deviceManager;
 
-ModbusHandler::ModbusHandler(HardwareSerial& port, uint8_t slaveID)
-    : mb() {
+ModbusHandler::ModbusHandler(HardwareSerial& portRef, uint8_t slaveRef)
+    : port(portRef), slaveID(slaveRef), mb() {
     mbInstance = &mb;             // Link static instance pointer (for callbacks if needed)
-    mb.begin(&port);          // -1 means no DE/RE pin used (e.g. for RS-485)
-    mb.slave(slaveID);            // Set this device’s Modbus slave ID
 }
 
 void ModbusHandler::begin() {
     // System startup control and time tracking
+    Serial.begin(BAUDRATE);
+    while (!Serial) {};
+    mb.begin(&port);
+    mb.slave(slaveID);
     addHreg(ModbusReg::START_REG_ADDR, 0);  // Master writes here to start/stop
     addIreg(ModbusReg::TIME_LOW, 0);        // System time LSB (MSB not implemented yet)
 
