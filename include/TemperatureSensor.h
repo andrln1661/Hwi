@@ -1,3 +1,4 @@
+
 #pragma once  // Ensure the header is only included once during compilation
 
 #include <OneWire.h>             // For communicating with 1-Wire devices like DS18B20
@@ -17,6 +18,7 @@ private:
     int16_t temperature;         // Last read temperature in 0.1°C precision (e.g., 254 = 25.4°C)
                                  // Changed from uint16_t to handle negative Celsius values
     uint8_t status;              // Encoded sensor status (e.g., 0=OK, 1=too low, 2=too high)
+    uint64_t lastTemperatureRequest = 0; // Instance-specific timestamp
 
 public:
     // Constructor: specify GPIO pin and Modbus register mappings

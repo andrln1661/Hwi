@@ -1,8 +1,9 @@
 #pragma once
-class ModbusHandler;
-class DeviceManager;
-class Motor;
+
+#include "ModbusHandler.h"
+#include "DeviceManager.h"
+#include "Motor.h"
 
 extern ModbusHandler* modbusHandler;
 extern DeviceManager* deviceManager;
-extern Motor* motors;
+extern Motor** motors;  // Changed from Motor* to Motor**

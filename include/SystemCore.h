@@ -1,3 +1,4 @@
+
 #pragma once
 // Prevents multiple inclusions of this header file during compilation.
 
@@ -13,6 +14,9 @@ class SystemCore {
 public:
     // Constructor to initialize internal members (could also be used to preload configs)
     SystemCore();
+    
+    // Destructor to clean up dynamically allocated objects
+    ~SystemCore();
 
     // Sets up all subsystems (sensors, motors, Modbus, etc.)
     void setup();
@@ -32,11 +36,15 @@ private:
     TemperatureSensor airSensor;        // Ambient air temperature sensor (DS18B20 or similar)
     TemperatureSensor waterSensor;      // Water temperature sensor (same interface as above)
 
-    TemperatureSensor motorSensors[NUM_MOTORS]; // Array of per-motor temperature sensors
+    TemperatureSensor* motorSensors[NUM_MOTORS]; // Array of pointers to per-motor temperature sensors
 
-    Motor motors[NUM_MOTORS];           // Core control objects for DC motors (PWM + safety logic)
+    Motor* motors[NUM_MOTORS];          // Array of pointers to core motor control objects
 
     DeviceManager deviceManager;        // Controls peripheral devices (fan, mixer, pump, etc.)
+
+    uint64_t accumulated_ticks = 0;
+    uint32_t last_overflow_snapshot = 0;
+    uint16_t current_timer0_prescaler = 64;
 
     // --- Timekeeping ---
 

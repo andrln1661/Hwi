@@ -1,3 +1,4 @@
+
 #include "DeviceManager.h"
 #include "ModbusHandler.h"
 #include "Config.h"
@@ -14,21 +15,11 @@ void DeviceManager::begin() {
     digitalWrite(MIXER_PIN, LOW);
     digitalWrite(DISPENSER_PIN, LOW);
     digitalWrite(PUMP_PIN, LOW);
-
-    // Register command holding registers (manual override if implemented)
-    modbusHandler->addHreg(ModbusReg::FAN_REG, 0);
-    modbusHandler->addHreg(ModbusReg::MIXER_REG, 0);
-    modbusHandler->addHreg(ModbusReg::DISPENSER_REG, 0);
-    modbusHandler->addHreg(ModbusReg::PUMP_REG, 0);
-
-    // Register status input registers
-    for (int i = 0; i < 4; ++i)
-        modbusHandler->addIreg(ModbusReg::DEV_STATUS_BASE + i, 0);
 }
 
 void DeviceManager::update(const TemperatureSensor& airSensor, 
                            const TemperatureSensor& waterSensor, 
-                           const Motor motors[]) {
+                           const Motor* const* motors) {
     // --- Fan logic ---
     uint16_t airTemp = airSensor.getTemperature();
     uint16_t airLow = modbusHandler->getHreg(ModbusReg::AIR_TEMP_LOW);
@@ -58,7 +49,7 @@ void DeviceManager::update(const TemperatureSensor& airSensor,
     // --- Pump logic ---
     bool pumpState = false;
     for (int i = 0; i < NUM_MOTORS; i++) {
-        if (motors[i].getStatus() < 2 && 
+        if (motors[i]->getStatus() < 2 && 
             modbusHandler->getHreg(ModbusReg::DUTY_BASE + i) > 0) {
             pumpState = true;
             break;

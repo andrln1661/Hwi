@@ -1,10 +1,11 @@
+
 #include "Globals.h"
 #include "SystemCore.h"
 #include "Config.h"
 #include "PWMController.h"   // Add this line
 
 SystemCore::SystemCore()
-    : modbus(Serial, 1),
+    : modbus(Serial, SLAVE_ID),
       airSensor(AIR_TEMP_PIN, 
                 ModbusReg::AIR_TEMP_REG,
                 ModbusReg::AIR_TEMP_LOW,
@@ -13,48 +14,14 @@ SystemCore::SystemCore()
                   ModbusReg::WATER_TEMP_REG,
                   ModbusReg::WATER_TEMP_LOW,
                   ModbusReg::WATER_TEMP_HIGH),
-      motorSensors{
-          TemperatureSensor(TEMP_PINS[0], ModbusReg::TEMP_BASE + 0, ModbusReg::MOTOR_TEMP_CRIT, 0),
-          TemperatureSensor(TEMP_PINS[1], ModbusReg::TEMP_BASE + 1, ModbusReg::MOTOR_TEMP_CRIT, 0),
-          TemperatureSensor(TEMP_PINS[2], ModbusReg::TEMP_BASE + 2, ModbusReg::MOTOR_TEMP_CRIT, 0),
-          TemperatureSensor(TEMP_PINS[3], ModbusReg::TEMP_BASE + 3, ModbusReg::MOTOR_TEMP_CRIT, 0),
-          TemperatureSensor(TEMP_PINS[4], ModbusReg::TEMP_BASE + 4, ModbusReg::MOTOR_TEMP_CRIT, 0),
-          TemperatureSensor(TEMP_PINS[5], ModbusReg::TEMP_BASE + 5, ModbusReg::MOTOR_TEMP_CRIT, 0),
-          TemperatureSensor(TEMP_PINS[6], ModbusReg::TEMP_BASE + 6, ModbusReg::MOTOR_TEMP_CRIT, 0),
-          TemperatureSensor(TEMP_PINS[7], ModbusReg::TEMP_BASE + 7, ModbusReg::MOTOR_TEMP_CRIT, 0),
-          TemperatureSensor(TEMP_PINS[8], ModbusReg::TEMP_BASE + 8, ModbusReg::MOTOR_TEMP_CRIT, 0),
-          TemperatureSensor(TEMP_PINS[9], ModbusReg::TEMP_BASE + 9, ModbusReg::MOTOR_TEMP_CRIT, 0),
-          TemperatureSensor(TEMP_PINS[10], ModbusReg::TEMP_BASE + 10, ModbusReg::MOTOR_TEMP_CRIT, 0),
-          TemperatureSensor(TEMP_PINS[11], ModbusReg::TEMP_BASE + 11, ModbusReg::MOTOR_TEMP_CRIT, 0),
-          TemperatureSensor(TEMP_PINS[12], ModbusReg::TEMP_BASE + 12, ModbusReg::MOTOR_TEMP_CRIT, 0),
-          TemperatureSensor(TEMP_PINS[13], ModbusReg::TEMP_BASE + 13, ModbusReg::MOTOR_TEMP_CRIT, 0),
-          TemperatureSensor(TEMP_PINS[14], ModbusReg::TEMP_BASE + 14, ModbusReg::MOTOR_TEMP_CRIT, 0)
-      },
-      motors{
-          Motor(0, PWM_PINS[0], CURRENT_PINS[0], &motorSensors[0]),
-          Motor(1, PWM_PINS[1], CURRENT_PINS[1], &motorSensors[1]),
-          Motor(2, PWM_PINS[2], CURRENT_PINS[2], &motorSensors[2]),
-          Motor(3, PWM_PINS[3], CURRENT_PINS[3], &motorSensors[3]),
-          Motor(4, PWM_PINS[4], CURRENT_PINS[4], &motorSensors[4]),
-          Motor(5, PWM_PINS[5], CURRENT_PINS[5], &motorSensors[5]),
-          Motor(6, PWM_PINS[6], CURRENT_PINS[6], &motorSensors[6]),
-          Motor(7, PWM_PINS[7], CURRENT_PINS[7], &motorSensors[7]),
-          Motor(8, PWM_PINS[8], CURRENT_PINS[8], &motorSensors[8]),
-          Motor(9, PWM_PINS[9], CURRENT_PINS[9], &motorSensors[9]),
-          Motor(10, PWM_PINS[10], CURRENT_PINS[10], &motorSensors[10]),
-          Motor(11, PWM_PINS[11], CURRENT_PINS[11], &motorSensors[11]),
-          Motor(12, PWM_PINS[12], CURRENT_PINS[12], &motorSensors[12]),
-          Motor(13, PWM_PINS[13], CURRENT_PINS[13], &motorSensors[13]),
-          Motor(14, PWM_PINS[14], CURRENT_PINS[14], &motorSensors[14])
-      },
       prev_prescaler(0) {
-        ::modbusHandler = &modbus;
-        ::deviceManager = &deviceManager;
-        ::motors = this -> motors;
-    
-    // Initialize motor sensors
+    ::modbusHandler = &modbus;
+    ::deviceManager = &deviceManager;
+    ::motors = this->motors;  // Update global pointer to motor array
+
+    // Initialize motor sensors with dynamic allocation
     for (uint8_t i = 0; i < NUM_MOTORS; i++) {
-        motorSensors[i] = TemperatureSensor(
+        motorSensors[i] = new TemperatureSensor(
             TEMP_PINS[i], 
             ModbusReg::TEMP_BASE + i,
             ModbusReg::MOTOR_TEMP_CRIT,
@@ -62,14 +29,23 @@ SystemCore::SystemCore()
         );
     }
     
-    // Initialize motors
+    // Initialize motors with dynamic allocation
     for (uint8_t i = 0; i < NUM_MOTORS; i++) {
-        motors[i] = Motor(
+        motors[i] = new Motor(
             i, 
             PWM_PINS[i], 
             CURRENT_PINS[i], 
-            &motorSensors[i]
+            motorSensors[i],  // Pass pointer to sensor
+            this->modbus
         );
+    }
+}
+
+SystemCore::~SystemCore() {
+    // Clean up dynamically allocated objects
+    for (uint8_t i = 0; i < NUM_MOTORS; i++) {
+        delete motorSensors[i];
+        delete motors[i];
     }
 }
 
@@ -80,12 +56,13 @@ void SystemCore::setup() {
     // Initialize sensors
     airSensor.begin();
     waterSensor.begin();
-    for (auto& sensor : motorSensors) {
-        sensor.begin();
+    for (uint8_t i = 0; i < NUM_MOTORS; i++) {
+        motorSensors[i]->begin();  // Pointer access
     }
+    
     // Initialize motors
-    for (auto& motor : motors) {
-        motor.begin();
+    for (uint8_t i = 0; i < NUM_MOTORS; i++) {
+        motors[i]->begin();  // Pointer access
     }
     
     // Initialize devices
@@ -97,13 +74,16 @@ void SystemCore::loop() {
     
     static uint64_t lastMotorUpdate = 0;
     static uint64_t lastTempUpdate = 0;
-    uint64_t now = millisCustom();
+    uint64_t now = millisCustom() * 2;
     
-    // Update motor status every 100ms
-    if (now - lastMotorUpdate >= 100) {
+    // Update motor status every 500ms
+    if (now - lastMotorUpdate >= 500) {
         lastMotorUpdate = now;
-        for (auto& motor : motors) {
-            motor.update();
+        for (uint8_t i = 0; i < NUM_MOTORS; i += 3) { // Process 2 motors per cycle
+            if (i < NUM_MOTORS) motors[i]->update();
+            if (i+1 < NUM_MOTORS) motors[i+1]->update();
+            if (i+2 < NUM_MOTORS) motors[i+2]->update();
+            modbus.task(); // Handle Modbus between batches
         }
     }
 
@@ -111,61 +91,81 @@ void SystemCore::loop() {
     if (now - lastTempUpdate >= 1000) {
         lastTempUpdate = now;
 
-        for (auto& sensor : motorSensors) {
-            sensor.requestTemperatures(now);
+        Serial.println();
+        Serial.print(modbus.getIreg(ModbusReg::TIME_LOW + 3));
+        Serial.print(modbus.getIreg(ModbusReg::TIME_LOW + 2));
+        Serial.print(modbus.getIreg(ModbusReg::TIME_LOW + 1));
+        Serial.print(modbus.getIreg(ModbusReg::TIME_LOW));
+
+        // Request temperatures first
+        for (uint8_t i = 0; i < NUM_MOTORS; i++) {
+            motorSensors[i]->requestTemperatures(now);  // Pointer access
         }
 
-        // Update all temperature sensors
-        for (auto& sensor : motorSensors) {
-            sensor.update();
+        // Then update all temperature readings
+        for (uint8_t i = 0; i < NUM_MOTORS; i++) {
+            motorSensors[i]->update();  // Pointer access
         }
 
         airSensor.update();
         waterSensor.update();
         
-        // Update devices
+        // Update devices (pass pointer to motor array)
         deviceManager.update(airSensor, waterSensor, motors);
         
         // Update timestamp register
         modbus.setIreg(ModbusReg::TIME_LOW, uint16_t(now & 0xFFFF));
+        modbus.setIreg(ModbusReg::TIME_LOW + 1, uint16_t((now >> 16) & 0xFFFF));
+        modbus.setIreg(ModbusReg::TIME_LOW + 2, uint16_t((now >> 32) & 0xFFFF));
+        modbus.setIreg(ModbusReg::TIME_LOW + 3, uint16_t((now >> 48) & 0xFFFF));
     }
 }
 
 uint64_t SystemCore::millisCustom() {
-    // Implementation of custom millis function
     extern volatile unsigned long timer0_overflow_count;
+    
     uint8_t tcnt0_snapshot;
     uint32_t overflow_snapshot;
 
-    // Get current prescaler from Timer0 control register
-    uint8_t prescalerBits = TCCR0B & 0x07;
-    uint16_t prescaler;
-    switch (prescalerBits) {
-        case 1: prescaler = 1; break;
-        case 2: prescaler = 8; break;
-        case 3: prescaler = 64; break;
-        case 4: prescaler = 256; break;
-        case 5: prescaler = 1024; break;
-        default: prescaler = 64; break;
+    // Determine the new prescaler directly from the register
+    uint8_t prescaler_bits = TCCR0B & 0x07;
+    uint16_t new_prescaler;
+    switch (prescaler_bits) {
+        case 1: new_prescaler = 1; break;
+        case 2: new_prescaler = 8; break;
+        case 3: new_prescaler = 64; break;
+        case 4: new_prescaler = 256; break;
+        case 5: new_prescaler = 1024; break;
+        default: new_prescaler = 64; break;
     }
 
-    // Adjust timer0_overflow_count if prescaler changes
-    if (prescaler != prev_prescaler && prev_prescaler) {
-        double value = (double)timer0_overflow_count * prev_prescaler / prescaler;
-        timer0_overflow_count = (uint32_t)(value + 0.5); // Round to nearest integer
-    }
-
-    // Capture timer state safely
     noInterrupts();
     tcnt0_snapshot = TCNT0;
     overflow_snapshot = timer0_overflow_count;
+    // This check is crucial to catch an overflow that happens right as we read the registers
     if ((TIFR0 & _BV(TOV0)) && (tcnt0_snapshot < 255)) {
         overflow_snapshot++;
     }
     interrupts();
 
-    // Calculate milliseconds
-    uint64_t ticks = (uint64_t)overflow_snapshot * 256ULL + tcnt0_snapshot;
-    prev_prescaler = prescaler;
-    return (ticks * prescaler * 1000ULL) / F_CPU;
+    // The core logic: If the prescaler has changed, we finalize the time
+    // accumulated with the OLD prescaler and add it to our master accumulator.
+    if (new_prescaler != current_timer0_prescaler) {
+        // Calculate overflows since last check and convert to ticks using the OLD prescaler
+        uint32_t overflows_since_last = overflow_snapshot - last_overflow_snapshot;
+        accumulated_ticks += (uint64_t)overflows_since_last * 256 * current_timer0_prescaler;
+        
+        // Update the last snapshot and the current prescaler for the next run
+        last_overflow_snapshot = overflow_snapshot;
+        current_timer0_prescaler = new_prescaler;
+    }
+
+    // Calculate total ticks: the master accumulator plus the ticks in the current cycle
+    uint64_t overflows_since_last = overflow_snapshot - last_overflow_snapshot;
+    uint64_t ticks_since_last_update = (overflows_since_last * 256 + tcnt0_snapshot) * current_timer0_prescaler;
+    uint64_t total_ticks = accumulated_ticks + ticks_since_last_update;
+
+
+    // Convert total CPU ticks to milliseconds using integer math
+    return total_ticks / (F_CPU / 1000UL);
 }

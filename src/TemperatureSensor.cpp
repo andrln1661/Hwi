@@ -1,3 +1,4 @@
+
 #include "TemperatureSensor.h"
 #include "ModbusHandler.h"
 #include "Config.h"
@@ -18,49 +19,57 @@ TemperatureSensor::TemperatureSensor(uint8_t pin, uint16_t tempReg,
 // Initializes the temperature sensor hardware
 void TemperatureSensor::begin() {
     sensor.begin();               // Initialize DallasTemperature library
-    sensor.setResolution(9);     // Set sensor resolution (11 bits = 0.125°C precision)
+    sensor.setResolution(10);     // Set sensor resolution (11 bits = 0.125°C precision)
     sensor.setWaitForConversion(false);
 }
 
 void TemperatureSensor::requestTemperatures(uint64_t now) {
-    static uint64_t lastTemperatureRequest = 0;
     if (now - lastTemperatureRequest > 1000) {
         sensor.requestTemperatures(); // Trigger temperature reading from DS18B20
+        lastTemperatureRequest = now;
     }
 }
 
 // Reads temperature, checks thresholds, and updates Modbus registers
 void TemperatureSensor::update() {
-    float tempC = sensor.getTempCByIndex(0); // Read the first sensor on the bus
- 
-    if (tempC == DEVICE_DISCONNECTED_C) {
-        // Handle sensor disconnect case
-        temperature = -32768;     // INT16_MIN sentinel value to indicate error
-        status = 3;               // Status code for disconnected
-    } else {
-        // Convert temperature to centi-degrees (e.g., 25.34°C → 2534)
-        temperature = static_cast<int16_t>(tempC * 100); 
-        
-        // Read threshold values from holding registers
-        uint16_t lowThreshold = modbusHandler->getHreg(regLowThreshold);
-        uint16_t highThreshold = modbusHandler->getHreg(regHighThreshold);
+    if (sensor.isConversionComplete()) {
+        float tempC = sensor.getTempCByIndex(0); // Read the first sensor on the bus
+    
+        if (tempC == DEVICE_DISCONNECTED_C) {
+            // Handle sensor disconnect case
+            temperature = -32768;     // INT16_MIN sentinel value to indicate error
+            status = 3;               // Status code for disconnected
+        } else {
+            // Convert temperature to centi-degrees (e.g., 25.34°C → 2534)
+            temperature = static_cast<int16_t>(tempC * 100); 
+            
+            // Read threshold values from holding registers
+            uint16_t lowThreshold = modbusHandler->getHreg(regLowThreshold);
+            uint16_t highThreshold = modbusHandler->getHreg(regHighThreshold);
 
-        // Compare and classify temperature status
-        if (temperature >= static_cast<int16_t>(highThreshold))
-            status = 2; // Temperature above upper limit
-        else if (temperature <= static_cast<int16_t>(lowThreshold))
-            status = 1; // Temperature below lower limit
-        else
-            status = 0; // Temperature within acceptable range
+            // Compare and classify temperature status
+            if (temperature >= static_cast<int16_t>(highThreshold))
+                status = 2; // Temperature above upper limit
+            else if (temperature <= static_cast<int16_t>(lowThreshold))
+                status = 1; // Temperature below lower limit
+            else
+                status = 0; // Temperature within acceptable range
+        }
+
+        // Write temperature to input register (read-only from master perspective)
+        modbusHandler->setIreg(regTemp, static_cast<uint16_t>(temperature));
+        // Note: If temperature is negative, casting to uint16_t will wrap around,
+        // which may need special handling on Modbus master side.
     }
-
-    // Write temperature to input register (read-only from master perspective)
-    modbusHandler->setIreg(regTemp, static_cast<uint16_t>(temperature));
-    // Note: If temperature is negative, casting to uint16_t will wrap around,
-    // which may need special handling on Modbus master side.
 }
 
 // Getter: returns raw centi-degree temperature value (can be negative)
+// int16_t TemperatureSensor::getTemperature() const {
+//     if (temperature < 0) {
+//         return 0;
+//     }
+//     return temperature;
+// }
 int16_t TemperatureSensor::getTemperature() const {
     return temperature;
 }

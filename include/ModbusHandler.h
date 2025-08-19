@@ -1,41 +1,30 @@
+
 #pragma once
-#include "ModbusRTU.h"
+#include <ArduinoModbus.h>
+#include <ArduinoRS485.h>
+#include <Arduino.h>
+#include "Config.h"
 
-// Handles all Modbus RTU interaction and register mapping
 class ModbusHandler {
-public:
-    // Constructor: takes a HardwareSerial port and slave address
-    ModbusHandler(HardwareSerial& portRef, uint8_t slaveRef);
-
-    // Initializes all registers and sets up ModbusRTU
-    void begin();
-
-    // Main task loop — call in Arduino loop() to process Modbus state
-    void task();
-
-    // --- Register Access ---
-
-    uint16_t getHreg(uint16_t addr);           // Read holding register
-    uint16_t getIreg(uint16_t addr);           // Read input register (❗you should implement this)
-    void setHreg(uint16_t addr, uint16_t value);  // Write holding register
-    void setIreg(uint16_t addr, uint16_t value);  // Update input register
-
-    void addHreg(uint16_t addr, uint16_t value = 0); // Define a holding register
-    void addIreg(uint16_t addr, uint16_t value = 0); // Define an input register
-
-    // --- Write Callback Registration ---
-    void registerMotorCallbacks();   // Bind motor control regs
-    void registerDeviceCallbacks();  // Bind actuator control regs
-    void registerSystemCallbacks();  // Bind system-level actions (E-STOP)
-
 private:
     HardwareSerial& port;
     uint8_t slaveID;
-    ModbusRTU mb;                   // Internal RTU instance
-    static ModbusRTU* mbInstance;  // For use in static callbacks
+    uint16_t dutyShadows[15];
+    uint16_t freqShadows[15];
+    uint16_t deviceShadows[4];
+    uint16_t startShadow;
 
-    // --- Callback Handlers for Register Writes ---
-    static uint16_t handleMotorWrite(TRegister* reg, uint16_t val);   // Handles duty/freq write
-    static uint16_t handleDeviceWrite(TRegister* reg, uint16_t val);  // Handles device on/off
-    static uint16_t handleSystemWrite(TRegister* reg, uint16_t val);  // Handles emergency stop
+public:
+    ModbusHandler(HardwareSerial& portRef, uint8_t slaveRef);
+    void begin(unsigned long baudrate = BAUDRATE);
+    void task();
+
+    uint16_t getHreg(uint16_t addr);
+    uint16_t getIreg(uint16_t addr);
+    void setHreg(uint16_t addr, uint16_t value);
+    void setIreg(uint16_t addr, uint16_t value);
+
+    void handleMotorWrite(uint16_t addr, uint16_t val);
+    void handleDeviceWrite(int addr, uint16_t val);
+    void handleSystemWrite(int addr, uint16_t val);
 };

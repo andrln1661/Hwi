@@ -1,8 +1,20 @@
 #pragma once
 #include <Arduino.h>  // Needed for pin constants
-    
+
+
+// Error codes
+enum ErrorCode {
+    ERR_NO_ERROR = 0,
+    ERR_TEMP_LOW = 1,
+    ERR_TEMP_HIGH = 2, 
+    ERR_SENSOR_DISCONNECTED = 3,
+    ERR_OVERCURRENT = 4,
+    ERR_MODBUS_CRC_FAIL = 5,
+    ERR_MODBUS_TIMEOUT = 6
+};
+
 // Serial port configuration
-constexpr uint32_t BAUDRATE = 9600;
+constexpr uint32_t BAUDRATE = 115200;
 
 // -------------------------
 // Pin Configuration

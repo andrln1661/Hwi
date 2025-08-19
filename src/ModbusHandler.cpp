@@ -1,154 +1,140 @@
+
 #include "ModbusHandler.h"
 #include "Motor.h"
 #include "DeviceManager.h"
 #include "Config.h"
 #include "Globals.h"
 
-// Static pointer to allow static callback access to Modbus instance
-ModbusRTU* ModbusHandler::mbInstance = nullptr;
-
-// Externally defined motor and device objects (e.g., in SystemCore.cpp)
-// extern Motor motors[NUM_MOTORS];
-// extern DeviceManager deviceManager;
-
 ModbusHandler::ModbusHandler(HardwareSerial& portRef, uint8_t slaveRef)
-    : port(portRef), slaveID(slaveRef), mb() {
-    mbInstance = &mb;             // Link static instance pointer (for callbacks if needed)
-}
+    : port(portRef), slaveID(slaveRef) {}
 
-void ModbusHandler::begin() {
-    // System startup control and time tracking
-    Serial.begin(BAUDRATE);
-    while (!Serial) {};
-    mb.begin(&port);
-    mb.slave(slaveID);
-    addHreg(ModbusReg::START_REG_ADDR, 0);  // Master writes here to start/stop
-    addIreg(ModbusReg::TIME_LOW, 0);        // System time LSB (MSB not implemented yet)
+void ModbusHandler::begin(unsigned long baudrate) {
+    port.begin(baudrate);  // For logging and Modbus
 
-    // Motor fault thresholds (settable by Modbus master)
-    addHreg(ModbusReg::MOTOR_TEMP_CRIT, TEMP_CRITICAL);
-    addHreg(ModbusReg::MOTOR_CURR_CRIT, CURR_CRITICAL);
+    // Begin with explicit parity (even) for validation
+    if (!ModbusRTUServer.begin(slaveID, baudrate, SERIAL_8E1)) {
+        while (1);
+    }
 
-    // Temperature thresholds for control logic (fan/mixer)
-    addHreg(ModbusReg::AIR_TEMP_LOW, TEMP_WARNING);
-    addHreg(ModbusReg::AIR_TEMP_HIGH, TEMP_CRITICAL);
-    addHreg(ModbusReg::WATER_TEMP_LOW, TEMP_WARNING);
-    addHreg(ModbusReg::WATER_TEMP_HIGH, TEMP_CRITICAL);
+    // Configure ranges (larger for safety)
+    ModbusRTUServer.configureHoldingRegisters(0, 1000);
+    ModbusRTUServer.configureInputRegisters(0, 1000);
 
-    // Bind Modbus register ranges to control callbacks
-    registerMotorCallbacks();
-    registerDeviceCallbacks();
-    registerSystemCallbacks();
+    // Init registers
+    ModbusRTUServer.holdingRegisterWrite(ModbusReg::START_REG_ADDR, 0);
+    ModbusRTUServer.inputRegisterWrite(ModbusReg::TIME_LOW, 0);
+    ModbusRTUServer.inputRegisterWrite(ModbusReg::TIME_LOW + 1, 0);
+    ModbusRTUServer.inputRegisterWrite(ModbusReg::TIME_LOW + 2, 0);
+    ModbusRTUServer.inputRegisterWrite(ModbusReg::TIME_LOW + 3, 0);
+    ModbusRTUServer.holdingRegisterWrite(ModbusReg::MOTOR_TEMP_CRIT, TEMP_CRITICAL);
+    ModbusRTUServer.holdingRegisterWrite(ModbusReg::MOTOR_CURR_CRIT, CURR_CRITICAL);
+    ModbusRTUServer.holdingRegisterWrite(ModbusReg::AIR_TEMP_LOW, TEMP_WARNING);
+    ModbusRTUServer.holdingRegisterWrite(ModbusReg::AIR_TEMP_HIGH, TEMP_CRITICAL);
+    ModbusRTUServer.holdingRegisterWrite(ModbusReg::WATER_TEMP_LOW, TEMP_WARNING);
+    ModbusRTUServer.holdingRegisterWrite(ModbusReg::WATER_TEMP_HIGH, TEMP_CRITICAL);
+
+    // Init duty and freq shadows and registers
+    for (uint8_t i = 0; i < NUM_MOTORS; i++) {
+        ModbusRTUServer.holdingRegisterWrite(ModbusReg::DUTY_BASE + i, 0);
+        dutyShadows[i] = 0;
+        ModbusRTUServer.holdingRegisterWrite(ModbusReg::FREQ_BASE + i, 1000);
+        freqShadows[i] = 1000;
+    }
+    memset(deviceShadows, 0, sizeof(deviceShadows));
+    startShadow = 0;
+
 }
 
 void ModbusHandler::task() {
-    mb.task();  // Must be called regularly from `loop()` to process Modbus requests
+    static uint8_t errorCount = 0;
+    
+    int pollResult = ModbusRTUServer.poll();
+    if (pollResult == -1) {
+        if (++errorCount > 10) {
+            // Reset Modbus state after 10 errors
+            ModbusRTUServer.begin(slaveID, BAUDRATE, SERIAL_8E1);
+            errorCount = 0;
+        }
+    } else {
+        errorCount = 0;
+    }
+    if (!port.available()) return;
+
+    // int pollResult = ModbusRTUServer.poll();
+    // if (pollResult == -1) {
+    //     // Error handling (e.g., frame/CRC error); increment counter or log
+    // }
+
+    // Check for changes in holding registers (reactive handling)
+    for (uint8_t i = 0; i < NUM_MOTORS; i++) {
+        uint16_t dutyVal = ModbusRTUServer.holdingRegisterRead(ModbusReg::DUTY_BASE + i);
+        if (dutyVal != dutyShadows[i]) {
+            handleMotorWrite(ModbusReg::DUTY_BASE + i, dutyVal);
+            dutyShadows[i] = dutyVal;
+        }
+        uint16_t freqVal = ModbusRTUServer.holdingRegisterRead(ModbusReg::FREQ_BASE + i);
+        if (freqVal != freqShadows[i]) {
+            handleMotorWrite(ModbusReg::FREQ_BASE + i, freqVal);
+            freqShadows[i] = freqVal;
+        }
+    }
+    for (uint8_t i = 0; i < 4; i++) {
+        uint16_t devVal = ModbusRTUServer.holdingRegisterRead(ModbusReg::DEV_STATUS_BASE + i);
+        if (devVal != deviceShadows[i]) {
+            handleDeviceWrite(ModbusReg::DEV_STATUS_BASE + i, devVal);
+            deviceShadows[i] = devVal;
+        }
+    }
+    uint16_t startVal = ModbusRTUServer.holdingRegisterRead(ModbusReg::START_REG_ADDR);
+    if (startVal != startShadow) {
+        handleSystemWrite(ModbusReg::START_REG_ADDR, startVal);
+        startShadow = startVal;
+    }
 }
 
 uint16_t ModbusHandler::getHreg(uint16_t addr) {
-    return mb.Hreg(addr);  // Read a holding register (for internal logic)
+    return ModbusRTUServer.holdingRegisterRead(addr);
+}
+
+uint16_t ModbusHandler::getIreg(uint16_t addr) {
+    return ModbusRTUServer.inputRegisterRead(addr);
 }
 
 void ModbusHandler::setHreg(uint16_t addr, uint16_t value) {
-    mb.Hreg(addr, value);  // Write a holding register
+    ModbusRTUServer.holdingRegisterWrite(addr, value);
 }
 
 void ModbusHandler::setIreg(uint16_t addr, uint16_t value) {
-    mb.Ireg(addr, value);  // Write an input register (read-only to master)
+    ModbusRTUServer.inputRegisterWrite(addr, value);
 }
 
-void ModbusHandler::addHreg(uint16_t addr, uint16_t value) {
-    mb.addHreg(addr, value);  // Add and initialize holding register
-}
-
-void ModbusHandler::addIreg(uint16_t addr, uint16_t value) {
-    mb.addIreg(addr, value);  // Add and initialize input register
-}
-
-void ModbusHandler::registerMotorCallbacks() {
-    // Handle duty and frequency register updates for all motors
-    mb.onSetHreg(ModbusReg::DUTY_BASE, handleMotorWrite, NUM_MOTORS);
-    mb.onSetHreg(ModbusReg::FREQ_BASE, handleMotorWrite, NUM_MOTORS);
-}
-
-void ModbusHandler::registerDeviceCallbacks() {
-    // Individual control for fan, mixer, dispenser, pump
-    mb.onSetHreg(ModbusReg::FAN_REG, handleDeviceWrite, 1);
-    mb.onSetHreg(ModbusReg::MIXER_REG, handleDeviceWrite, 1);
-    mb.onSetHreg(ModbusReg::DISPENSER_REG, handleDeviceWrite, 1);
-    mb.onSetHreg(ModbusReg::PUMP_REG, handleDeviceWrite, 1);
-}
-
-void ModbusHandler::registerSystemCallbacks() {
-    // Handle system start/stop
-    mb.onSetHreg(ModbusReg::START_REG_ADDR, handleSystemWrite, 1);
-}
-
-uint16_t ModbusHandler::handleMotorWrite(TRegister* reg, uint16_t val) {
-    if (!reg) return 0;  // Safety: avoid null pointer crash
-
-    uint16_t addr = reg->address.address;
-
-    // Handle duty cycle set
-    if (addr >= ModbusReg::DUTY_BASE && addr < ModbusReg::DUTY_BASE + NUM_MOTORS) {
-        uint8_t motorId = addr - ModbusReg::DUTY_BASE;
-        motors[motorId].setDuty(val);  // Actual logic in Motor.cpp
-        return val;
+void ModbusHandler::handleMotorWrite(uint16_t addr, uint16_t val) {  // Changed parameter type to uint16_t
+    if (addr >= ModbusReg::DUTY_BASE &&
+        addr < ModbusReg::DUTY_BASE + NUM_MOTORS) {
+        uint8_t id = addr - ModbusReg::DUTY_BASE;
+        motors[id]->setDuty(val);
+    } else if (addr >= ModbusReg::FREQ_BASE &&
+               addr < ModbusReg::FREQ_BASE + NUM_MOTORS) {
+        uint8_t id = addr - ModbusReg::FREQ_BASE;
+        motors[id]->setFrequency(val);
     }
-    // Handle frequency set
-    else if (addr >= ModbusReg::FREQ_BASE && addr < ModbusReg::FREQ_BASE + NUM_MOTORS) {
-        uint8_t motorId = addr - ModbusReg::FREQ_BASE;
-        motors[motorId].setFrequency(val);
-        return val;
-    }
-
-    return 0;  // Invalid address — no action
 }
 
-uint16_t ModbusHandler::handleDeviceWrite(TRegister* reg, uint16_t val) {
-    if (!reg) return 0;
-
-    uint16_t addr = reg->address.address;
-
-    // Fan control
-    if (addr == ModbusReg::FAN_REG) {
-        deviceManager->controlFan(val > 0);
-        return val;
-    }
-    // Mixer control
-    else if (addr == ModbusReg::MIXER_REG) {
-        deviceManager->controlMixer(val > 0);
-        return val;
-    }
-    // Dispenser control
-    else if (addr == ModbusReg::DISPENSER_REG) {
-        deviceManager->controlDispenser(val > 0);
-        return val;
-    }
-    // Pump control
-    else if (addr == ModbusReg::PUMP_REG) {
-        deviceManager->controlPump(val > 0);
-        return val;
-    }
-
-    return 0;  // Unknown device address
+void ModbusHandler::handleDeviceWrite(int addr, uint16_t val) {
+    if (addr == ModbusReg::FAN_REG) deviceManager->controlFan(val > 0);
+    else if (addr == ModbusReg::MIXER_REG) deviceManager->controlMixer(val > 0);
+    else if (addr == ModbusReg::DISPENSER_REG) deviceManager->controlDispenser(val > 0);
+    else if (addr == ModbusReg::PUMP_REG) deviceManager->controlPump(val > 0);
 }
 
-uint16_t ModbusHandler::handleSystemWrite(TRegister* reg, uint16_t val) {
-    if (!reg) return 0;
-
-    if (val == 0) {  // Emergency stop triggered by master
+void ModbusHandler::handleSystemWrite(int addr, uint16_t val) {
+    if (val == 0) {
         for (int i = 0; i < NUM_MOTORS; i++) {
-            motors[i].setDuty(0);  // Force stop all motors
-            // Optionally: motors[i].stop(); if frequency reset is needed
+            motors[i]->setDuty(0);
         }
-
-        // Turn off all system actuators
         deviceManager->controlFan(false);
         deviceManager->controlMixer(false);
         deviceManager->controlDispenser(false);
         deviceManager->controlPump(false);
     }
-
-    return 1;  // Acknowledge successful write
 }
