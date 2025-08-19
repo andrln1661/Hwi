@@ -20,6 +20,8 @@ private:
     uint8_t status;              // Encoded sensor status (e.g., 0=OK, 1=too low, 2=too high)
     uint64_t lastTemperatureRequest = 0; // Instance-specific timestamp
 
+    uint32_t lastRequestTime;
+    bool conversionPending;
 public:
     // Constructor: specify GPIO pin and Modbus register mappings
     TemperatureSensor(uint8_t pin, uint16_t tempReg, uint16_t lowThresholdReg, uint16_t highThresholdReg);
@@ -38,4 +40,9 @@ public:
 
     // Read data from sensors (Take's a bit time so we need it to call before reading temps)
     void requestTemperatures(uint64_t now);
+
+    void requestTemperaturesAsync();
+    bool isConversionComplete();
+    void readTemperatureAsync();
+
 };

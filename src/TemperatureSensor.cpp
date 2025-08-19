@@ -30,6 +30,22 @@ void TemperatureSensor::requestTemperatures(uint64_t now) {
     }
 }
 
+void TemperatureSensor::requestTemperaturesAsync() {
+    if (!conversionPending && (millis() - lastRequestTime > 1000)) {
+        sensor.requestTemperatures();
+        conversionPending = true;
+        lastRequestTime = millis();
+    }
+}
+
+bool TemperatureSensor::isConversionComplete() {
+    if (conversionPending) {
+        conversionPending = !sensor.isConversionComplete();
+        return !conversionPending;
+    }
+    return false;
+}
+
 // Reads temperature, checks thresholds, and updates Modbus registers
 void TemperatureSensor::update() {
     if (sensor.isConversionComplete()) {

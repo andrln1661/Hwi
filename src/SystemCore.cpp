@@ -50,7 +50,6 @@ SystemCore::~SystemCore() {
 }
 
 void SystemCore::setup() {
-    PWMController::initialize();
     modbus.begin();
     
     // Initialize sensors
@@ -65,11 +64,14 @@ void SystemCore::setup() {
         motors[i]->begin();  // Pointer access
     }
     
+    PWMController::initialize();
     // Initialize devices
     deviceManager.begin();
 }
 
 void SystemCore::loop() {
+    static uint8_t currentSensor = 0;
+
     modbus.task();
     
     static uint64_t lastMotorUpdate = 0;
@@ -77,7 +79,7 @@ void SystemCore::loop() {
     uint64_t now = millisCustom() * 2;
     
     // Update motor status every 500ms
-    if (now - lastMotorUpdate >= 500) {
+    if (now - lastMotorUpdate >= 100) {
         lastMotorUpdate = now;
         for (uint8_t i = 0; i < NUM_MOTORS; i += 3) { // Process 2 motors per cycle
             if (i < NUM_MOTORS) motors[i]->update();
@@ -90,12 +92,6 @@ void SystemCore::loop() {
     // Update temperature and devices every 1000ms
     if (now - lastTempUpdate >= 1000) {
         lastTempUpdate = now;
-
-        Serial.println();
-        Serial.print(modbus.getIreg(ModbusReg::TIME_LOW + 3));
-        Serial.print(modbus.getIreg(ModbusReg::TIME_LOW + 2));
-        Serial.print(modbus.getIreg(ModbusReg::TIME_LOW + 1));
-        Serial.print(modbus.getIreg(ModbusReg::TIME_LOW));
 
         // Request temperatures first
         for (uint8_t i = 0; i < NUM_MOTORS; i++) {
@@ -119,6 +115,8 @@ void SystemCore::loop() {
         modbus.setIreg(ModbusReg::TIME_LOW + 2, uint16_t((now >> 32) & 0xFFFF));
         modbus.setIreg(ModbusReg::TIME_LOW + 3, uint16_t((now >> 48) & 0xFFFF));
     }
+
+
 }
 
 uint64_t SystemCore::millisCustom() {

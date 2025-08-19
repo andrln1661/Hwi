@@ -1,4 +1,3 @@
-
 #pragma once
 #include <ArduinoModbus.h>
 #include <ArduinoRS485.h>
@@ -13,6 +12,11 @@ private:
     uint16_t freqShadows[15];
     uint16_t deviceShadows[4];
     uint16_t startShadow;
+
+    static constexpr uint8_t BUFFER_SIZE = 64;
+    static uint8_t modbusBuffer[BUFFER_SIZE];
+    static volatile uint8_t modbusIndex;
+    static volatile bool frameReady;
 
 public:
     ModbusHandler(HardwareSerial& portRef, uint8_t slaveRef);

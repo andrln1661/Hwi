@@ -1,4 +1,3 @@
-
 // PWMController.cpp
 #include "PWMController.h"
 #include "Config.h"     // Contains MIN_PWM_FREQ and MAX_PWM_FREQ
@@ -76,7 +75,6 @@ void PWMController::setFrequency(uint8_t pin, uint32_t freq) {
 
 // Set PWM duty cycle (0–1000) for the given pin
 void PWMController::setDutyCycle(uint8_t pin, uint16_t duty) {
-    noInterrupts();
     duty = constrain(duty, 0, 1000);  // Duty expressed in per-mille (0–1000)
     uint16_t ocrValue = 0;
 
@@ -108,5 +106,4 @@ void PWMController::setDutyCycle(uint8_t pin, uint16_t duty) {
         case 45: ocrValue = (uint32_t)duty * ICR5 / 1000UL; OCR5B = ocrValue; break;
         case 46: ocrValue = (uint32_t)duty * ICR5 / 1000UL; OCR5A = ocrValue; break;
     }
-    interrupts();
 }
