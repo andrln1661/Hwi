@@ -9,7 +9,8 @@ private:
     HardwareSerial& port;
     uint8_t slaveID;
     uint16_t dutyShadows[15];
-    uint16_t freqShadows[15];
+    // uint16_t freqShadows[15];
+    uint16_t globalFreqShadow;
     uint16_t deviceShadows[4];
     uint16_t startShadow;
 

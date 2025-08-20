@@ -10,8 +10,11 @@ public:
     static void initialize();
 
     // Sets the frequency for a specific pin by modifying timer prescaler or TOP
-    static void setFrequency(uint8_t pin, uint32_t freq);
+    // static void setFrequency(uint8_t pin, uint32_t freq);
+    static void setGlobalFrequency(uint32_t freq);
 
     // Sets the duty cycle (0–1000) for a specific pin
     static void setDutyCycle(uint8_t pin, uint16_t duty);
+private:
+    static uint32_t currentGlobalFreq;
 };

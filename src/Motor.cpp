@@ -15,7 +15,8 @@ void Motor::begin() {
     pinMode(pwmPin, OUTPUT);
     currentSensor.begin();  // Initialize current sensor
     
-    PWMController::setFrequency(pwmPin, 1000);
+    // PWMController::setFrequency(pwmPin, 1000);
+    PWMController::setGlobalFrequency(1000);
     PWMController::setDutyCycle(pwmPin, 0);
 }
 
@@ -52,7 +53,7 @@ void Motor::setDuty(uint16_t duty) {
 }
 
 void Motor::setFrequency(uint32_t freq) {
-    PWMController::setFrequency(pwmPin, freq);
+    PWMController::setGlobalFrequency(freq);
 }
 
 uint8_t Motor::getStatus() const {

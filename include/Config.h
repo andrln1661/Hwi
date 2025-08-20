@@ -48,7 +48,8 @@ namespace ModbusReg {
     // --- Motor Parameters ---
     // Holding Registers (writeable by master)
     constexpr uint16_t DUTY_BASE = 0;      // Holding: [0–14] — duty cycle control
-    constexpr uint16_t FREQ_BASE = 100;    // Holding: [100–114] — frequency control
+    // constexpr uint16_t FREQ_BASE = 100;    // Holding: [100–114] — frequency control
+    constexpr uint16_t GLOBAL_FREQ = 100;
 
     // Input Registers (read-only to master)
     constexpr uint16_t CURR_BASE = 200;    // Input: [200–214] — motor current values

@@ -37,8 +37,8 @@ void ModbusHandler::begin(unsigned long baudrate) {
     for (uint8_t i = 0; i < NUM_MOTORS; i++) {
         ModbusRTUServer.holdingRegisterWrite(ModbusReg::DUTY_BASE + i, 0);
         dutyShadows[i] = 0;
-        ModbusRTUServer.holdingRegisterWrite(ModbusReg::FREQ_BASE + i, 1000);
-        freqShadows[i] = 1000;
+        // ModbusRTUServer.holdingRegisterWrite(ModbusReg::FREQ_BASE + i, 1000);
+        // freqShadows[i] = 1000;
     }
     memset(deviceShadows, 0, sizeof(deviceShadows));
     startShadow = 0;
@@ -72,11 +72,11 @@ void ModbusHandler::task() {
             handleMotorWrite(ModbusReg::DUTY_BASE + i, dutyVal);
             dutyShadows[i] = dutyVal;
         }
-        uint16_t freqVal = ModbusRTUServer.holdingRegisterRead(ModbusReg::FREQ_BASE + i);
-        if (freqVal != freqShadows[i]) {
-            handleMotorWrite(ModbusReg::FREQ_BASE + i, freqVal);
-            freqShadows[i] = freqVal;
-        }
+        // uint16_t freqVal = ModbusRTUServer.holdingRegisterRead(ModbusReg::FREQ_BASE + i);
+        // if (freqVal != freqShadows[i]) {
+            // handleMotorWrite(ModbusReg::FREQ_BASE + i, freqVal);
+            // freqShadows[i] = freqVal;
+        // }
     }
     for (uint8_t i = 0; i < 4; i++) {
         uint16_t devVal = ModbusRTUServer.holdingRegisterRead(ModbusReg::DEV_STATUS_BASE + i);
@@ -113,11 +113,17 @@ void ModbusHandler::handleMotorWrite(uint16_t addr, uint16_t val) {  // Changed 
         addr < ModbusReg::DUTY_BASE + NUM_MOTORS) {
         uint8_t id = addr - ModbusReg::DUTY_BASE;
         motors[id]->setDuty(val);
-    } else if (addr >= ModbusReg::FREQ_BASE &&
-               addr < ModbusReg::FREQ_BASE + NUM_MOTORS) {
-        uint8_t id = addr - ModbusReg::FREQ_BASE;
-        motors[id]->setFrequency(val);
+    } 
+    else if (addr == ModbusReg::GLOBAL_FREQ) {
+        globalFreqShadow = val;
+        // PWMController::setGlobalFrequency(val);
+        motors[1]->setFrequency(val);
     }
+    // else if (addr >= ModbusReg::FREQ_BASE &&
+            //    addr < ModbusReg::FREQ_BASE + NUM_MOTORS) {
+        // uint8_t id = addr - ModbusReg::FREQ_BASE;
+        // motors[id]->setFrequency(val);
+    // }
 }
 
 void ModbusHandler::handleDeviceWrite(int addr, uint16_t val) {
