@@ -30,11 +30,11 @@ void TemperatureSensor::requestTemperatures(uint64_t now) {
     }
 }
 
-void TemperatureSensor::requestTemperaturesAsync() {
-    if (!conversionPending && (millis() - lastRequestTime > 1000)) {
+void TemperatureSensor::requestTemperaturesAsync(uint64_t now) {
+    if (!conversionPending && (now - lastRequestTime > 1000)) {
         sensor.requestTemperatures();
         conversionPending = true;
-        lastRequestTime = millis();
+        lastRequestTime = now;
     }
 }
 
@@ -48,7 +48,7 @@ bool TemperatureSensor::isConversionComplete() {
 
 // Reads temperature, checks thresholds, and updates Modbus registers
 void TemperatureSensor::update() {
-    if (sensor.isConversionComplete()) {
+    if (conversionPending && sensor.isConversionComplete()) {
         float tempC = sensor.getTempCByIndex(0); // Read the first sensor on the bus
     
         if (tempC == DEVICE_DISCONNECTED_C) {
@@ -76,6 +76,7 @@ void TemperatureSensor::update() {
         modbusHandler->setIreg(regTemp, static_cast<uint16_t>(temperature));
         // Note: If temperature is negative, casting to uint16_t will wrap around,
         // which may need special handling on Modbus master side.
+        conversionPending = false;
     }
 }
 

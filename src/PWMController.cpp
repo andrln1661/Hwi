@@ -4,11 +4,6 @@
 #include <Arduino.h>
 #include <avr/io.h>     // Direct access to AVR timer registers
 
-// Timebase hooks in SystemCore.cpp
-extern void timebase_init_from_hw();
-extern void timebase_apply_new_top(uint16_t newTop);
-extern void timebase_apply_new_prescaler(uint16_t newPresc);
-
 // Initialize all timers (Timer0–Timer5) in PWM mode
 void PWMController::initialize() {
     // Ensure pins are outputs
@@ -70,7 +65,7 @@ void PWMController::setGlobalFrequency(uint32_t freq) {
 
     // Timers 1, 3, 4, 5 (16-bit): pins 2, 3, 5, 6, 7, 8, 11, 12...is switched from Timer 2 to Timer 1 channel C in initialization)
     // Let timebase code handle Timer1 prescaler to preserve time accounting.
-    timebase_apply_new_prescaler(1);
+    TCCR1B = (TCCR1B & 0xF8) | 0x01;
     TCCR3B = (TCCR3B & 0xF8) | 0x01;
     TCCR4B = (TCCR4B & 0xF8) | 0x01;
     TCCR5B = (TCCR5B & 0xF8) | 0x01;
@@ -82,8 +77,7 @@ void PWMController::setGlobalFrequency(uint32_t freq) {
     if (top > 65535UL) top = 65535; // with prescaler=1, this caps at ~244 Hz
 
     // Program Timer1 TOP via timebase API so timebase snapshots prior epoch
-    timebase_apply_new_top(uint16_t(top));
-
+    ICR1 = uint16_t(top);
     ICR3 = uint16_t(top);
     ICR4 = uint16_t(top);
     ICR5 = uint16_t(top);

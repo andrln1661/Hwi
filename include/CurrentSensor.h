@@ -5,7 +5,7 @@ class CurrentSensor {
 public:
     CurrentSensor(uint8_t pin, uint16_t regAddr);
     void begin();
-    void update();
+    void update(uint64_t now);
     uint16_t getCurrent() const;
     void setSmoothingFactor(float factor);
     

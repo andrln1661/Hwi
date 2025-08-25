@@ -9,13 +9,13 @@ CurrentSensor::CurrentSensor(uint8_t pin, uint16_t regAddr)
 
 void CurrentSensor::begin() {
     pinMode(pin, INPUT);
+    
     // Initial reading to start filter
     uint16_t raw = analogRead(pin);
     filteredValue = raw;
 }
 
-void CurrentSensor::update() {
-    uint32_t now = millis();
+void CurrentSensor::update(uint64_t now) {
     if (now - lastSampleTime < SAMPLE_INTERVAL) return;
     
     lastSampleTime = now;
@@ -26,7 +26,7 @@ void CurrentSensor::update() {
     
     // Convert to mA (ACS712-5A specific conversion)
     uint16_t current = (filteredValue - 512) * 1000 / 66;
-    
+
     // Update Modbus register
     modbusHandler->setIreg(regAddr, current);
 }

@@ -41,7 +41,7 @@ public:
     // Read data from sensors (Take's a bit time so we need it to call before reading temps)
     void requestTemperatures(uint64_t now);
 
-    void requestTemperaturesAsync();
+    void requestTemperaturesAsync(uint64_t now);
     bool isConversionComplete();
     void readTemperatureAsync();
 

@@ -20,8 +20,8 @@ void Motor::begin() {
     PWMController::setDutyCycle(pwmPin, 0);
 }
 
-void Motor::update() {
-    currentSensor.update();  // Update current reading
+void Motor::update(uint64_t now) {
+    currentSensor.update(now);  // Update current reading
     
     int16_t temp = tempSensor->getTemperature();
     modbusHandler.setIreg(ModbusReg::TEMP_BASE + id, static_cast<uint16_t>(temp));

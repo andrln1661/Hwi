@@ -10,7 +10,7 @@ public:
     Motor(uint8_t id, uint8_t pwmPin, uint8_t currentPin, 
           TemperatureSensor* tempSensor, ModbusHandler& modbus);
     void begin();
-    void update();
+    void update(uint64_t now);
     void setDuty(uint16_t duty);
     void setFrequency(uint32_t freq);
     uint8_t getStatus() const;

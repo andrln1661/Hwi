@@ -72,19 +72,25 @@ void SystemCore::setup() {
 void SystemCore::loop() {
     static uint8_t currentSensor = 0;
 
-    modbus.task();
     
     static uint64_t lastMotorUpdate = 0;
     static uint64_t lastTempUpdate = 0;
-    uint64_t now = millisCustom() * 2;
+    uint64_t now = millisCustom();
+
+        modbus.setIreg(ModbusReg::TIME_LOW, uint16_t(now & 0xFFFF));
+        modbus.setIreg(ModbusReg::TIME_LOW + 1, uint16_t((now >> 16) & 0xFFFF));
+        modbus.setIreg(ModbusReg::TIME_LOW + 2, uint16_t((now >> 32) & 0xFFFF));
+        modbus.setIreg(ModbusReg::TIME_LOW + 3, uint16_t((now >> 48) & 0xFFFF));
+
+    modbus.task();
     
     // Update motor status every 500ms
     if (now - lastMotorUpdate >= 100) {
         lastMotorUpdate = now;
         for (uint8_t i = 0; i < NUM_MOTORS; i += 3) { // Process 2 motors per cycle
-            if (i < NUM_MOTORS) motors[i]->update();
-            if (i+1 < NUM_MOTORS) motors[i+1]->update();
-            if (i+2 < NUM_MOTORS) motors[i+2]->update();
+            if (i < NUM_MOTORS) motors[i]->update(now);
+            if (i+1 < NUM_MOTORS) motors[i+1]->update(now);
+            if (i+2 < NUM_MOTORS) motors[i+2]->update(now);
             modbus.task(); // Handle Modbus between batches
         }
     }
@@ -95,7 +101,7 @@ void SystemCore::loop() {
 
         // Request temperatures first
         for (uint8_t i = 0; i < NUM_MOTORS; i++) {
-            motorSensors[i]->requestTemperatures(now);  // Pointer access
+            motorSensors[i]->requestTemperaturesAsync(now);  // Pointer access
         }
 
         // Then update all temperature readings
@@ -110,13 +116,7 @@ void SystemCore::loop() {
         deviceManager.update(airSensor, waterSensor, motors);
         
         // Update timestamp register
-        modbus.setIreg(ModbusReg::TIME_LOW, uint16_t(now & 0xFFFF));
-        modbus.setIreg(ModbusReg::TIME_LOW + 1, uint16_t((now >> 16) & 0xFFFF));
-        modbus.setIreg(ModbusReg::TIME_LOW + 2, uint16_t((now >> 32) & 0xFFFF));
-        modbus.setIreg(ModbusReg::TIME_LOW + 3, uint16_t((now >> 48) & 0xFFFF));
     }
-
-
 }
 
 uint64_t SystemCore::millisCustom() {
