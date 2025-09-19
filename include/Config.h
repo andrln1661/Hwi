@@ -14,7 +14,7 @@ enum ErrorCode {
 };
 
 // Serial port configuration
-constexpr uint32_t BAUDRATE = 115200;
+constexpr uint32_t BAUDRATE = 250000;
 
 // -------------------------
 // Pin Configuration
@@ -47,39 +47,38 @@ namespace ModbusReg {
 
     // --- Motor Parameters ---
     // Holding Registers (writeable by master)
-    constexpr uint16_t DUTY_BASE = 0;      // Holding: [0–14] — duty cycle control
-    // constexpr uint16_t FREQ_BASE = 100;    // Holding: [100–114] — frequency control
-    constexpr uint16_t GLOBAL_FREQ = 100;
+    constexpr uint16_t DUTY_BASE = 1;      // Holding: [1–15] — duty cycle control
+    constexpr uint16_t GLOBAL_FREQ = 0;
 
     // Input Registers (read-only to master)
-    constexpr uint16_t CURR_BASE = 200;    // Input: [200–214] — motor current values
-    constexpr uint16_t TEMP_BASE = 300;    // Input: [300–314] — motor temperature values
-    constexpr uint16_t STATUS_BASE = 400;  // Input: [400–414] — motor status (e.g. overtemp, error)
+    constexpr uint16_t CURR_BASE = 16;    // Input: [16–30] — motor current values
+    constexpr uint16_t TEMP_BASE = 31;    // Input: [31–45] — motor temperature values
+    constexpr uint16_t STATUS_BASE = 46;  // Input: [46–60] — motor status (e.g. overtemp, error)
 
     // Thresholds (Holding registers, writeable by master)
-    constexpr uint16_t MOTOR_TEMP_CRIT = 500;
-    constexpr uint16_t MOTOR_CURR_CRIT = 501;
+    constexpr uint16_t MOTOR_TEMP_CRIT = 61;
+    constexpr uint16_t MOTOR_CURR_CRIT = 62;
 
     // --- System Parameters ---
-    constexpr uint16_t START_REG_ADDR = 900;
-    constexpr uint16_t TIME_LOW = 901;
+    constexpr uint16_t START_REG_ADDR = 65;
+    constexpr uint16_t TIME_LOW = 66;
 
     // Air Temp
-    constexpr uint16_t AIR_TEMP_REG = 920;
-    constexpr uint16_t AIR_TEMP_LOW = 921;
-    constexpr uint16_t AIR_TEMP_HIGH = 922;
+    constexpr uint16_t AIR_TEMP_REG = 70;
+    constexpr uint16_t AIR_TEMP_LOW = 71;
+    constexpr uint16_t AIR_TEMP_HIGH = 72;
 
     // Water Temp
-    constexpr uint16_t WATER_TEMP_REG = 930;
-    constexpr uint16_t WATER_TEMP_LOW = 931;
-    constexpr uint16_t WATER_TEMP_HIGH = 932;
+    constexpr uint16_t WATER_TEMP_REG = 80;
+    constexpr uint16_t WATER_TEMP_LOW = 81;
+    constexpr uint16_t WATER_TEMP_HIGH = 82;
 
     // --- Device States ---
-    constexpr uint16_t DEV_STATUS_BASE = 911;
-    constexpr uint16_t FAN_REG = 911;
-    constexpr uint16_t MIXER_REG = 912;
-    constexpr uint16_t DISPENSER_REG = 913;
-    constexpr uint16_t PUMP_REG = 914;
+    constexpr uint16_t DEV_STATUS_BASE = 90;
+    constexpr uint16_t FAN_REG = 91;
+    constexpr uint16_t MIXER_REG = 92;
+    constexpr uint16_t DISPENSER_REG = 93;
+    constexpr uint16_t PUMP_REG = 94;
 }
 
 // -------------------------
@@ -91,7 +90,7 @@ constexpr uint8_t NUM_MOTORS = 15;
 // Temperature values scaled (e.g., 5000 = 50.00°C if using hundredths of °C)
 constexpr uint16_t TEMP_WARNING  = 5000;
 constexpr uint16_t TEMP_CRITICAL = 6000;
-constexpr uint16_t CURR_CRITICAL = 900;     // mA or raw sensor units
+constexpr uint16_t CURR_CRITICAL = 9000;     // mA or raw sensor units
 
 // PWM frequency range (Hz)
 constexpr uint16_t MIN_PWM_FREQ = 100;

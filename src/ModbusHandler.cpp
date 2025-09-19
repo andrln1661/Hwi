@@ -17,8 +17,8 @@ void ModbusHandler::begin(unsigned long baudrate) {
     }
 
     // Configure ranges (larger for safety)
-    ModbusRTUServer.configureHoldingRegisters(0, 1000);
-    ModbusRTUServer.configureInputRegisters(0, 1000);
+    ModbusRTUServer.configureHoldingRegisters(0, 100);
+    ModbusRTUServer.configureInputRegisters(0, 100);
 
     // Init registers
     ModbusRTUServer.holdingRegisterWrite(ModbusReg::START_REG_ADDR, 0);
@@ -66,6 +66,11 @@ void ModbusHandler::task() {
     // }
 
     // Check for changes in holding registers (reactive handling)
+    uint16_t globalFreq = ModbusRTUServer.holdingRegisterRead(ModbusReg::GLOBAL_FREQ);
+    if (globalFreqShadow != globalFreq) {
+        handleMotorWrite(ModbusReg::GLOBAL_FREQ, globalFreq);
+        globalFreqShadow = globalFreq;
+    }
     for (uint8_t i = 0; i < NUM_MOTORS; i++) {
         uint16_t dutyVal = ModbusRTUServer.holdingRegisterRead(ModbusReg::DUTY_BASE + i);
         if (dutyVal != dutyShadows[i]) {

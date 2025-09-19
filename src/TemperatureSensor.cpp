@@ -1,4 +1,3 @@
-
 #include "TemperatureSensor.h"
 #include "ModbusHandler.h"
 #include "Config.h"

@@ -22,10 +22,10 @@ void CurrentSensor::update(uint64_t now) {
     uint16_t raw = analogRead(pin);
     
     // Exponential smoothing
-    filteredValue = smoothingFactor * raw + (1 - smoothingFactor) * filteredValue;
+    // filteredValue = smoothingFactor * raw + (1 - smoothingFactor) * filteredValue;
     
     // Convert to mA (ACS712-5A specific conversion)
-    uint16_t current = (filteredValue - 512) * 1000 / 66;
+    uint16_t current = (raw - 512) * 1000 / 66;
 
     // Update Modbus register
     modbusHandler->setIreg(regAddr, current);
