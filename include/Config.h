@@ -1,12 +1,12 @@
 #pragma once
-#include <Arduino.h>  // Needed for pin constants
-
+#include <Arduino.h> // Needed for pin constants
 
 // Error codes
-enum ErrorCode {
+enum ErrorCode
+{
     ERR_NO_ERROR = 0,
     ERR_TEMP_LOW = 1,
-    ERR_TEMP_HIGH = 2, 
+    ERR_TEMP_HIGH = 2,
     ERR_SENSOR_DISCONNECTED = 3,
     ERR_OVERCURRENT = 4,
     ERR_MODBUS_CRC_FAIL = 5,
@@ -31,8 +31,8 @@ constexpr uint8_t CURRENT_PINS[15] = {A0, A1, A2, A3, A4, A5, A6, A7, A8, A9, A1
 constexpr uint8_t TEMP_PINS[15] = {22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36};
 
 // System-wide sensors (also digital pins)
-constexpr uint8_t WATER_TEMP_PIN = 20;  // ⚠️ Also I2C SDA
-constexpr uint8_t AIR_TEMP_PIN = 21;    // ⚠️ Also I2C SCL
+constexpr uint8_t WATER_TEMP_PIN = 20; // ⚠️ Also I2C SDA
+constexpr uint8_t AIR_TEMP_PIN = 21;   // ⚠️ Also I2C SCL
 
 // Output control pins for actuators
 constexpr uint8_t FAN_PIN = 40;
@@ -43,17 +43,13 @@ constexpr uint8_t PUMP_PIN = 43;
 // -------------------------
 // Modbus Register Map
 // -------------------------
-namespace ModbusReg {
+namespace ModbusHoldingReg
+{
 
     // --- Motor Parameters ---
     // Holding Registers (writeable by master)
-    constexpr uint16_t DUTY_BASE = 1;      // Holding: [1–15] — duty cycle control
+    constexpr uint16_t DUTY_BASE = 1; // Holding: [1–15] — duty cycle control
     constexpr uint16_t GLOBAL_FREQ = 0;
-
-    // Input Registers (read-only to master)
-    constexpr uint16_t CURR_BASE = 16;    // Input: [16–30] — motor current values
-    constexpr uint16_t TEMP_BASE = 31;    // Input: [31–45] — motor temperature values
-    constexpr uint16_t STATUS_BASE = 46;  // Input: [46–60] — motor status (e.g. overtemp, error)
 
     // Thresholds (Holding registers, writeable by master)
     constexpr uint16_t MOTOR_TEMP_CRIT = 61;
@@ -61,20 +57,28 @@ namespace ModbusReg {
 
     // --- System Parameters ---
     constexpr uint16_t START_REG_ADDR = 65;
-    constexpr uint16_t TIME_LOW = 66;
 
     // Air Temp
     constexpr uint16_t AIR_TEMP_REG = 70;
-    constexpr uint16_t AIR_TEMP_LOW = 71;
-    constexpr uint16_t AIR_TEMP_HIGH = 72;
+    constexpr uint16_t AIR_TEMP_LIMIT = 72;
 
     // Water Temp
     constexpr uint16_t WATER_TEMP_REG = 80;
-    constexpr uint16_t WATER_TEMP_LOW = 81;
-    constexpr uint16_t WATER_TEMP_HIGH = 82;
+    constexpr uint16_t WATER_TEMP_LIMIT = 82;
+
+}
+
+namespace ModbusInputReg
+{
+    // Input Registers (read-only to master)
+    constexpr uint16_t CURR_BASE = 16;   // Input: [16–30] — motor current values
+    constexpr uint16_t TEMP_BASE = 31;   // Input: [31–45] — motor temperature values
+    constexpr uint16_t STATUS_BASE = 46; // Input: [46–60] — motor status (e.g. overtemp, error)
+
+    constexpr uint16_t DEV_STATUS_BASE = 90;
+    constexpr uint16_t TIME_LOW = 66;
 
     // --- Device States ---
-    constexpr uint16_t DEV_STATUS_BASE = 90;
     constexpr uint16_t FAN_REG = 91;
     constexpr uint16_t MIXER_REG = 92;
     constexpr uint16_t DISPENSER_REG = 93;
@@ -88,9 +92,9 @@ namespace ModbusReg {
 constexpr uint8_t NUM_MOTORS = 15;
 
 // Temperature values scaled (e.g., 5000 = 50.00°C if using hundredths of °C)
-constexpr uint16_t TEMP_WARNING  = 5000;
+constexpr uint16_t TEMP_WARNING = 5000;
 constexpr uint16_t TEMP_CRITICAL = 6000;
-constexpr uint16_t CURR_CRITICAL = 9000;     // mA or raw sensor units
+constexpr uint16_t CURR_CRITICAL = 9000; // mA or raw sensor units
 
 // PWM frequency range (Hz)
 constexpr uint16_t MIN_PWM_FREQ = 100;

@@ -1,4 +1,3 @@
-
 #pragma once
 // Prevents multiple inclusions of this header file during compilation.
 
@@ -8,14 +7,15 @@
 #include "DeviceManager.h"     // Manages auxiliary actuators like fan, pump, mixer, etc.
 #include "Config.h"            // Global configuration constants (e.g., NUM_MOTORS)
 #include <Arduino.h>           // Arduino core functions and types (pinMode, millis, digitalWrite, etc.)
-
+#include <string.h>
 
 // Main orchestrator of the embedded system. Handles setup, runtime control, and data flow.
-class SystemCore {
+class SystemCore
+{
 public:
     // Constructor to initialize internal members (could also be used to preload configs)
     SystemCore();
-    
+
     // Destructor to clean up dynamically allocated objects
     ~SystemCore();
 
@@ -32,16 +32,16 @@ public:
 private:
     // --- Subsystems ---
 
-    ModbusHandler modbus;               // Modbus RTU slave handler (interfaces with external master like Python GUI)
+    ModbusHandler modbus; // Modbus RTU slave handler (interfaces with external master like Python GUI)
 
-    TemperatureSensor airSensor;        // Ambient air temperature sensor (DS18B20 or similar)
-    TemperatureSensor waterSensor;      // Water temperature sensor (same interface as above)
+    TemperatureSensor airSensor;   // Ambient air temperature sensor (DS18B20 or similar)
+    TemperatureSensor waterSensor; // Water temperature sensor (same interface as above)
 
-    TemperatureSensor* motorSensors[NUM_MOTORS]; // Array of pointers to per-motor temperature sensors
+    TemperatureSensor *motorSensors[NUM_MOTORS]; // Array of pointers to per-motor temperature sensors
 
-    Motor* motors[NUM_MOTORS];          // Array of pointers to core motor control objects
+    Motor *motors[NUM_MOTORS]; // Array of pointers to core motor control objects
 
-    DeviceManager deviceManager;        // Controls peripheral devices (fan, mixer, pump, etc.)
+    DeviceManager deviceManager; // Controls peripheral devices (fan, mixer, pump, etc.)
 
     uint64_t accumulated_ticks = 0;
     uint32_t last_overflow_snapshot = 0;

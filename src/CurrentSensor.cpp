@@ -7,34 +7,43 @@ CurrentSensor::CurrentSensor(uint8_t pin, uint16_t regAddr)
     : pin(pin), regAddr(regAddr), filteredValue(0),
       smoothingFactor(DEFAULT_SMOOTHING), lastSampleTime(0) {}
 
-void CurrentSensor::begin() {
+void CurrentSensor::begin()
+{
     pinMode(pin, INPUT);
-    
+    if (pin == A0)
+        analogReference(INTERNAL1V1);
+
     // Initial reading to start filter
     uint16_t raw = analogRead(pin);
-    filteredValue = raw;
+    // float current = float(raw - 512) / 1024 * 5 / 185 * 1000;
+    current = raw;
+    modbusHandler->setIreg(regAddr, raw);
 }
 
-void CurrentSensor::update(uint64_t now) {
-    if (now - lastSampleTime < SAMPLE_INTERVAL) return;
-    
+void CurrentSensor::update(uint64_t now)
+{
+    if (now - lastSampleTime < SAMPLE_INTERVAL)
+        return;
+
     lastSampleTime = now;
     uint16_t raw = analogRead(pin);
-    
+
     // Exponential smoothing
     // filteredValue = smoothingFactor * raw + (1 - smoothingFactor) * filteredValue;
-    
-    // Convert to mA (ACS712-5A specific conversion)
-    uint16_t current = (raw - 512) * 1000 / 66;
+    // float voltage = (raw - 512) / 1024 * 5;
+    // current = voltage / 66 * 1000; // 27.03 for 1V ref
+    current = raw;
 
     // Update Modbus register
-    modbusHandler->setIreg(regAddr, current);
+    modbusHandler->setIreg(regAddr, raw);
 }
 
-uint16_t CurrentSensor::getCurrent() const {
-    return (filteredValue - 512) * 1000 / 66;
+float CurrentSensor::getCurrent() const
+{
+    return current;
 }
 
-void CurrentSensor::setSmoothingFactor(float factor) {
-    smoothingFactor = constrain(factor, 0.0f, 1.0f);
-}
+// void CurrentSensor::setSmoothingFactor(float factor)
+// {
+//     smoothingFactor = constrain(factor, 0.0f, 1.0f);
+// }

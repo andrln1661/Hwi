@@ -1,9 +1,10 @@
 // PWMController.h
 #pragma once
-#include <Arduino.h>  // Provides types like uint8_t and utility macros like constrain()
+#include <Arduino.h> // Provides types like uint8_t and utility macros like constrain()
 
 // Class to control hardware PWM on Arduino Mega (ATmega2560)
-class PWMController {
+class PWMController
+{
 public:
     // Initializes all timers (0 to 5) into appropriate PWM mode
     static void initialize();
@@ -20,7 +21,10 @@ public:
     static void delayCustom(uint64_t ms);
     static volatile uint64_t _micros64;
     static uint32_t _us_per_overflow;
-    
+    static void clearCount();
+
+    static float getDuty(uint8_t pin);
+
 private:
     static uint32_t currentGlobalFreq;
     static uint16_t _timer2_top;

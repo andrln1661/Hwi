@@ -4,12 +4,14 @@
 #include <Arduino.h>
 #include "Config.h"
 
-class ModbusHandler {
+class SystemCore; // Forward declaration
+
+class ModbusHandler
+{
 private:
-    HardwareSerial& port;
+    HardwareSerial &port;
     uint8_t slaveID;
-    uint16_t dutyShadows[15];
-    // uint16_t freqShadows[15];
+    uint16_t dutyShadows[NUM_MOTORS];
     uint16_t globalFreqShadow;
     uint16_t deviceShadows[4];
     uint16_t startShadow;
@@ -20,7 +22,7 @@ private:
     static volatile bool frameReady;
 
 public:
-    ModbusHandler(HardwareSerial& portRef, uint8_t slaveRef);
+    ModbusHandler(HardwareSerial &portRef, uint8_t slaveRef);
     void begin(unsigned long baudrate = BAUDRATE);
     void task();
 
